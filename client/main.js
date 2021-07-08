@@ -13,7 +13,7 @@ function createWindow() {
         top: 0,
         width: size.width,
         height: size.height,
-        frame: true,
+        frame: process.platform === 'darwin' ? true : false,
         show: true,
         transparent: true,
         resizable: false,

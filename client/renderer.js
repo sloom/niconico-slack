@@ -1,11 +1,11 @@
 const electron = require('electron');
 const { screen } = electron;
-const NicommentJS = require('./lib/nicommentJS.js');
+const nicoJS = require('./lib/nico.js');
 const config = require('electron-node-config');
 
 let size = screen.getPrimaryDisplay().size;
 
-var nico = new NicommentJS({
+var nico = new nicoJS({
     app: document.getElementById('app'),
     width: size.width,
     height: size.height,

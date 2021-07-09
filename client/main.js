@@ -1,24 +1,43 @@
-const electron = require('electron');
-const { app, BrowserWindow } = electron;
+const { app, BrowserWindow, screen, ipcMain } = require('electron');
+const path = require('path');
+const yaml = require('js-yaml');
+const Store = require('electron-store');
+const stringify = require('stringify');
+const store = new Store({
+    fileExtension: 'yaml',
+    serialize: yaml.dump,
+    deserialize: yaml.load,
+    cwd: path.join(app.getPath('appData'), app.getName()),
+    name: 'default'
+});
 
 let mainWindow;
 
+function addIpcListener() {
+    ipcMain.on('get-host-config', (event, arg) => {
+        event.returnValue = store.get('config.hostname');
+    });
+    ipcMain.on('get-primary-display-size', (event, arg) => {
+        event.returnValue = screen.getPrimaryDisplay().size;
+    });
+}
+
 function createWindow() {
-
-    const { screen } = electron;
-    let size = screen.getPrimaryDisplay().size;
-
+    const size = screen.getPrimaryDisplay().size;
     mainWindow = new BrowserWindow({
         left: 0,
         top: 0,
         width: size.width,
         height: size.height,
         frame: process.platform === 'darwin' ? true : false,
-        show: true,
+        show: false,
         transparent: true,
         resizable: false,
         hasShadow: false,
-        alwaysOnTop: true
+        alwaysOnTop: true,
+        webPreferences: {
+            preload: path.join(app.getAppPath(), 'renderer.js')
+        }
     });
 
     mainWindow.setIgnoreMouseEvents(true);
@@ -33,9 +52,15 @@ function createWindow() {
         mainWindow = null;
     });
 
+    mainWindow.on('ready-to-show', () => {
+        mainWindow.show();
+    });
 }
 
-app.on('ready', createWindow);
+app.on('ready', () => {
+    addIpcListener();
+    createWindow();
+});
 
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {

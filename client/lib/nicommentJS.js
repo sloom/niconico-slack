@@ -31,8 +31,10 @@ class nicommentJS {
     /**
      * コメントを送信する
      * @param {String} text 
+     * @param {String} [color] - 文字色
+     * @param {number} [fontSize] - 文字サイズ
      */
-    send(text) {
+    send(text, color = this.color, fontSize = this.fontSize) {
         let x = this.width;
         let y = Math.random() * (this.height - this.fontSize*2);
         let comment = document.createElement('div');
@@ -44,8 +46,8 @@ class nicommentJS {
         comment.style.position = 'absolute';
         comment.style.left = x + 'px';
         comment.style.top = y + 'px';
-        comment.style.fontSize = this.fontSize + 'px';
-        comment.style.color = this.color;
+        comment.style.fontSize = fontSize + 'px';
+        comment.style.color = color;
         comment.style.fontWeight = '600';
         comment.style.textShadow = '0 0 3px #000';
         comment.style.webkitTextStroke = '2px #000';

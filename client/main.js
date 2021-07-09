@@ -2,7 +2,6 @@ const { app, BrowserWindow, screen, ipcMain } = require('electron');
 const path = require('path');
 const yaml = require('js-yaml');
 const Store = require('electron-store');
-const stringify = require('stringify');
 const store = new Store({
     fileExtension: 'yaml',
     serialize: yaml.dump,

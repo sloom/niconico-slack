@@ -13,6 +13,7 @@ class nicommentJS {
         this.color = params.color || '#FFF';
         this.width = params.width || 300;
         this.height = params.height || 300;
+        this.emojiEntityRegexp = new RegExp(String.raw`^\s*&#x`);
 
         this._setupApplication();
     }
@@ -49,8 +50,12 @@ class nicommentJS {
         comment.style.fontSize = fontSize + 'px';
         comment.style.color = color;
         comment.style.fontWeight = '600';
-        comment.style.textShadow = '0 0 3px #000';
-        comment.style.webkitTextStroke = '2px #000';
+        if (text.match(this.emojiEntityRegexp)) {
+            // no-op (絵文字に好適なスタイルがあったら設定する)
+        } else {
+            comment.style.textShadow = '0 0 3px #000';
+            comment.style.webkitTextStroke = '2px #000';
+        }
         comment.style.fontFamily = "'Arial','Hiragino Kaku Gothic ProN','ヒラギノ角ゴ ProN W3','メイリオ', sans-serif";
 
         this.app.appendChild(comment);

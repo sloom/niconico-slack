@@ -56,11 +56,6 @@ function createWindow() {
     });
 }
 
-app.on('ready', () => {
-    addIpcListener();
-    createWindow();
-});
-
 app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') {
         app.quit();
@@ -72,3 +67,5 @@ app.on('activate', function () {
         createWindow();
     }
 });
+
+app.whenReady().then(addIpcListener).then(createWindow);

@@ -10,7 +10,7 @@ const store = new Store({
     serialize: yaml.dump,
     deserialize: yaml.load,
     cwd: path.join(app.getPath('appData'), app.getName()),
-    name: 'default'
+    name: 'default' 
 });
 // ランタイムで環境変数変えられると表示に齟齬が生じるので起動時に解決
 const targetHost = resolveHost();
@@ -68,7 +68,8 @@ function updateHost() {
 }
 
 function setupTray() {
-    const macIconPath = process.env.NODE_ENV === "debug" ? 'resources/icon.icns' : path.join(process.execPath, '../Resources/icon_22.png');
+    const appPath = path.join(process.execPath, '../../..');
+    const macIconPath = process.env.NODE_ENV === "debug" ? 'resources/icon_22.png' : path.join(appPath, 'Contents', 'Resources', 'icon_22.png');
     const tray = new Tray(isMac ? macIconPath : 'resources/icon.ico');
     const contextMenu = Menu.buildFromTemplate([
         { label: 'Change Host', type: 'normal', click: () => { updateHost() } },

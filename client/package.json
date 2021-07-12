@@ -7,10 +7,15 @@
     "node": ">= 10.15.1"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package:win": "node_modules/.bin/electron-packager . niconico-slack --platform=win32 --arch=x64 --asar --electron-version=13.1.6 --icon=images/icon.ico",
+    "package:mac": "node_modules/.bin/electron-packager . niconico-slack --platform=darwin --arch=x64 --asar --electron-version=13.1.6 --icon=images/icon.icns"
   },
   "author": "kengo92i",
   "license": "MIT",
+  "config": {
+    "niconico_slack_hostname": "niconico-slack-xxxxxx-xxxxx-packagejson.appspot.com"
+  },
   "dependencies": {
     "electron-store": "^8.0.0",
     "js-yaml": "^4.1.0"

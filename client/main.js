@@ -68,7 +68,8 @@ function updateHost() {
 }
 
 function setupTray() {
-    const tray = new Tray(isMac ? 'resources/icon.icns' : 'resources/icon.ico');
+    const macIconPath = process.env.NODE_ENV === "debug" ? 'resources/icon.icns' : path.join(process.execPath, '../Resources/icon_22.png');
+    const tray = new Tray(isMac ? macIconPath : 'resources/icon.ico');
     const contextMenu = Menu.buildFromTemplate([
         { label: 'Change Host', type: 'normal', click: () => { updateHost() } },
         { type: 'separator' },

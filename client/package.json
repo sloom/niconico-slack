@@ -8,8 +8,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "package:win": "node_modules/.bin/electron-packager . niconico-slack --platform=win32 --arch=x64 --asar --electron-version=13.1.6 --icon=images/icon.ico",
-    "package:mac": "node_modules/.bin/electron-packager . niconico-slack --platform=darwin --arch=x64 --asar --electron-version=13.1.6 --icon=images/icon.icns"
+    "package:win": "node_modules/.bin/electron-packager . niconico-slack --platform=win32 --arch=x64 --asar --extra-resource=resources/icon.ico --electron-version=13.1.6 --icon=resources/icon.ico",
+    "package:mac": "node_modules/.bin/electron-packager . niconico-slack --platform=darwin --arch=x64 --asar --extra-resource=resources/icon.icns --electron-version=13.1.6 --icon=resources/icon.icns"
   },
   "author": "kengo92i",
   "license": "MIT",
@@ -17,6 +17,7 @@
     "niconico_slack_hostname": "niconico-slack-xxxxxx-xxxxx-packagejson.appspot.com"
   },
   "dependencies": {
+    "electron-prompt": "^1.6.2",
     "electron-store": "^8.0.0",
     "js-yaml": "^4.1.0"
   }

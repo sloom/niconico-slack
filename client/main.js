@@ -7,36 +7,23 @@ const config = require('./Config');
 const slackMessage = require('./SlackMessage');
 // getter が無いので true を初期値としてこちらでも管理
 let ignoreMouseEvents = true;
-// ランタイムで環境変数変えられると表示に齟齬が生じるので起動時に解決
-const targetHost = resolveHost();
 
 let niconicoWindow;
 
 function addIpcListener() {
-    ipcMain.on('get-host-config', (event, arg) => {
-        event.returnValue = targetHost;
-    });
     ipcMain.on('get-primary-display-size', (event, arg) => {
         event.returnValue = screen.getPrimaryDisplay().size;
     });
 }
 
-function resolveHost() {
-    // ランタイムの環境変数 > 設定ファイル(default.yaml) > package.json 埋め込み値
-    const runtimeValue = process.env.NICONICO_SLACK_HOSTNAME;
-    const configValue = config.get('config.hostname');
-    const embeddedValue = require('./package.json').config.niconico_slack_hostname;
-    console.log(`runtime : ${runtimeValue}, config: ${configValue}, embedded: ${embeddedValue}`);
-    const targetHost = runtimeValue || configValue || embeddedValue;
-    console.log(`Hostname : ${targetHost}`);
-    return targetHost;
-}
-
 function updateHost() {
     prompt({
-        title: 'Change Host',
-        label: 'Hostname:',
-        value: targetHost,
+        title: 'Hostname',
+        useHtmlLabel: true,
+        label: '<small>*If the environment variable <b>NICONICO_SLACK_HOSTNAME</b> is set, <br>it will take precedence and this value will not be used.</small>',
+        value: config.resolveHost(),
+        height: 200,
+        width: 500,
         resizable: true,
         alwaysOnTop: true
     })
@@ -44,15 +31,9 @@ function updateHost() {
             if (!r) {
                 console.log('user cancelled');
             } else {
-                if (targetHost !== r) {
+                if (config.resolveHost() !== r) {
                     config.set('config.hostname', r);
-                    dialog.showMessageBoxSync(niconicoWindow, {
-                        title: app.getName(),
-                        message: 'Reboot is required. Press OK to restart. \nIf you are currently running this program unpackaged, you will need to restart it.',
-                        buttons: ['OK']
-                    });
-                    app.relaunch();
-                    app.quit();
+                    connectWebSocket(config.resolveHost());
                 }
             }
         })
@@ -75,7 +56,7 @@ function setupTray() {
         { type: 'separator' },
         { label: 'Exit', type: 'normal', click: () => { app.quit() } },
     ]);
-    tray.setToolTip(app.getName() + "\nHost: " + targetHost);
+    tray.setToolTip(app.getName());
     tray.setContextMenu(contextMenu)
     tray.on('click', () => {
         tray.popUpContextMenu();
@@ -127,7 +108,10 @@ function subscribeSlackMessage() {
     slackMessage.on('slack-message', (message) => {
         niconicoWindow.webContents.send('slack-message', message);
     });
-    slackMessage.connect(targetHost);
+}
+
+function connectWebSocket(host) {
+    slackMessage.connect(host);
 }
 
 function createWindow() {
@@ -144,7 +128,7 @@ function createWindow() {
         hasShadow: false,
         alwaysOnTop: true,
         webPreferences: {
-            preload: path.join(app.getAppPath(), 'renderer.js')
+            preload: path.join(app.getAppPath(), 'niconicoRenderer.js')
         }
     });
     niconicoWindow.setIgnoreMouseEvents(ignoreMouseEvents);
@@ -180,4 +164,4 @@ app.on('activate', function () {
     }
 });
 
-app.whenReady().then(addIpcListener).then(createWindow).then(setupTray).then(subscribeSlackMessage);
+app.whenReady().then(addIpcListener).then(createWindow).then(setupTray).then(subscribeSlackMessage).then(connectWebSocket(config.resolveHost()));

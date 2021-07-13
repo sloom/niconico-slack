@@ -15,6 +15,7 @@ class SlackMessage extends EventEmitter2 {
             this.emojiRegExps[key] = newRegExp;
         }
         this.emojiColumn = /:/g
+        this.socketio = null;
     }
 
     escapeRegExp(string) {
@@ -24,14 +25,22 @@ class SlackMessage extends EventEmitter2 {
     }
 
     connect(targetHost) {
-        const socketio = io('https://' + targetHost);
-        socketio.on('connection', () => {
+        if (this.socketio) {
+            try {
+                this.socketio.disconnect();
+            } catch(ignore) {
+                console.warn(`Error occurred while disconnecting socket. Ignoring. err=${err}`);
+            }
+            this.socketio = null;
+        }
+        this.socketio = io('https://' + targetHost);
+        this.socketio.on('connection', () => {
             console.log('connected!');
         });
-        socketio.on('connect_error', (err) => {
+        this.socketio.on('connect_error', (err) => {
             console.error(`connect failed. err=${err}`);
         });
-        socketio.on('message', (msg) => {
+        this.socketio.on('message', (msg) => {
             console.log('message receive: ' + msg);
             if (!msg) { return; } // msgがnullの時があるので
             msg = msg.replace(/<@.*>/, '');

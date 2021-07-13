@@ -1,27 +1,8 @@
 
 const { ipcRenderer } = require('electron');
 const NicommentJS = require('./lib/nicommentJS.js');
-const io = require('./lib/socket.io-2.1.1.min.js');
-const emoji = require('./resources/slack_emoji.json');
-const reRegExp = /[\\^$.*+?()[\]{}|]/g;
-const reHasRegExp = new RegExp(reRegExp.source);
-
-function escapeRegExp(string) {
-    return (string && reHasRegExp.test(string))
-        ? string.replace(reRegExp, '\\$&')
-        : string;
-}
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 絵文字検出用RegExpオブジェクトの作成
-    const emojiRegExps = {};
-    for (var key in emoji) {
-        const newRegExp = new RegExp(String.raw`:${escapeRegExp(key)}:`, 'g');
-        emojiRegExps[key] = newRegExp;
-    }
-    const emojiColumn = /:/g
-
-    const hosts = ipcRenderer.sendSync('get-host-config');
     const size = ipcRenderer.sendSync('get-primary-display-size');
     var nico = new NicommentJS({
         app: document.getElementById('app'),
@@ -31,23 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     // コメント待機
     nico.listen();
-    const socketio = io('https://' + hosts);
-    socketio.on('message', function (msg) {
-        console.log('message receive: ' + msg);
-        if (!msg) { return; } // msgがnullの時があるので
-        msg = msg.replace(/<@.*>/, '');
-        const columnCount = (msg.match(emojiColumn) || []).length;
-        if (columnCount >= 2) { // コロン2つが含まれた場合、絵文字を検索
-            for (emojiRegExpKey in emojiRegExps) {
-                const emojiRegExp = emojiRegExps[emojiRegExpKey];
-                if (msg.match(emojiRegExp)) {
-                    const entity = emoji[emojiRegExpKey];
-                    msg = msg.replace(emojiRegExp, entity);
-                    // break すると複数の絵文字に変換できないのでしない
-                }
-            }
-        }
-
-        nico.send(msg);
-    });
+    ipcRenderer.on('slack-message', (event, message) => {
+        nico.send(message);
+    })
 });

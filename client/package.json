@@ -17,12 +17,13 @@
     "niconico_slack_hostname": "niconico-slack-xxxxxx-xxxxx-packagejson.appspot.com"
   },
   "dependencies": {
+    "electron": "^13.1.6",
     "electron-prompt": "^1.6.2",
     "electron-store": "^8.0.0",
     "eventemitter2": "^6.4.4",
     "js-yaml": "^4.1.0",
     "socket.io-client": "^2.1.1",
-    "electron": "^13.1.6"
+    "winston": "^2.4.0"
   },
   "devDependencies": {
     "electron-packager": "^15.2.0"

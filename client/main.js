@@ -1,10 +1,11 @@
-const { app, BrowserWindow, screen, ipcMain, globalShortcut, Tray, Menu, dialog } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, globalShortcut, Tray, Menu, shell } = require('electron');
 const path = require('path');
 const isMac = process.platform === 'darwin';
 const devToolHotKey = isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I';
 const prompt = require('electron-prompt')
 const config = require('./Config');
 const slackMessage = require('./SlackMessage');
+const logger = require('./Logger');
 // getter が無いので true を初期値としてこちらでも管理
 let ignoreMouseEvents = true;
 
@@ -14,6 +15,11 @@ function addIpcListener() {
     ipcMain.on('get-primary-display-size', (event, arg) => {
         event.returnValue = screen.getPrimaryDisplay().size;
     });
+}
+
+function openLog() {
+    const fileTransports = logger.transports.file;
+    shell.openExternal(path.join(fileTransports.dirname, fileTransports.filename));
 }
 
 function updateHost() {
@@ -46,6 +52,8 @@ function setupTray() {
     const tray = new Tray(isMac ? macIconPath : 'resources/icon.ico');
     const contextMenu = Menu.buildFromTemplate([
         { label: 'Change Host', type: 'normal', click: () => { updateHost() } },
+        { label: 'Open Log', type: 'normal', click: () => { openLog() } },
+
         { type: 'separator' },
         {
             label: 'alwaysOnTop', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: () => {
@@ -107,6 +115,7 @@ function setupDevTools(browserWindow) {
 function subscribeSlackMessage() {
     slackMessage.on('slack-message', (message) => {
         niconicoWindow.webContents.send('slack-message', message);
+        logger.info(message.trim());
     });
 }
 

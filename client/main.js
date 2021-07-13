@@ -11,10 +11,17 @@ let ignoreMouseEvents = true;
 
 let niconicoWindow;
 let logWindow;
+let appQuiting = false;
 
 function addIpcListener() {
     ipcMain.on('get-primary-display-size', (event, arg) => {
         event.returnValue = screen.getPrimaryDisplay().size;
+    });
+}
+
+function initialize() {
+    app.on('before-quit', () => {
+        appQuiting = true;
     });
 }
 
@@ -36,7 +43,9 @@ function createLogWindow() {
     logWindow.loadURL('file://' + __dirname + '/log.html');
     logWindow.on('close', (event) => {
         logWindow.hide();
-        event.preventDefault();
+        if (!appQuiting) {
+            event.preventDefault();
+        }
     });
 }
 
@@ -68,6 +77,26 @@ function updateHost() {
         .catch(console.error);
 }
 
+function allClose() {
+    if (niconicoWindow) {
+        try {
+            niconicoWindow.close();
+            niconicoWindow.destroy();
+        } finally {
+            niconicoWindow = null;
+        }
+    }
+    if (logWindow) {
+        try {
+            logWindow.close();
+            logWindow.destroy();
+        } finally {
+            logWindow = null;
+        }
+    }
+
+}
+
 function setupTray() {
     const appPath = path.join(process.execPath, '../../..');
     const macIconPath = process.env.NODE_ENV === "debug" ? 'resources/icon_22.png' : path.join(appPath, 'Contents', 'Resources', 'icon_22.png');
@@ -84,7 +113,12 @@ function setupTray() {
         },
         { label: 'openDevTools', type: 'normal', click: () => { niconicoWindow.openDevTools(); } },
         { type: 'separator' },
-        { label: 'Exit', type: 'normal', click: () => { app.quit() } },
+        {
+            label: 'Exit', type: 'normal', click: () => {
+                allClose();
+                app.quit();
+            }
+        },
     ]);
     tray.setToolTip(app.getName());
     tray.setContextMenu(contextMenu)

@@ -3,11 +3,10 @@ const { ipcRenderer } = require('electron');
 const NicommentJS = require('./lib/nicommentJS.js');
 const io = require('./lib/socket.io-2.1.1.min.js');
 const emoji = require('./resources/slack_emoji.json');
-
+const reRegExp = /[\\^$.*+?()[\]{}|]/g;
+const reHasRegExp = new RegExp(reRegExp.source);
 
 function escapeRegExp(string) {
-    var reRegExp = /[\\^$.*+?()[\]{}|]/g,
-    reHasRegExp = new RegExp(reRegExp.source);
     return (string && reHasRegExp.test(string))
         ? string.replace(reRegExp, '\\$&')
         : string;

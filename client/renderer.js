@@ -4,11 +4,20 @@ const NicommentJS = require('./lib/nicommentJS.js');
 const io = require('./lib/socket.io-2.1.1.min.js');
 const emoji = require('./resources/slack_emoji.json');
 
+
+function escapeRegExp(string) {
+    var reRegExp = /[\\^$.*+?()[\]{}|]/g,
+    reHasRegExp = new RegExp(reRegExp.source);
+    return (string && reHasRegExp.test(string))
+        ? string.replace(reRegExp, '\\$&')
+        : string;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // 絵文字検出用RegExpオブジェクトの作成
     const emojiRegExps = {};
     for (var key in emoji) {
-        const newRegExp = new RegExp(String.raw`:${key}:`, 'g');
+        const newRegExp = new RegExp(String.raw`:${escapeRegExp(key)}:`, 'g');
         emojiRegExps[key] = newRegExp;
     }
     const emojiColumn = /:/g

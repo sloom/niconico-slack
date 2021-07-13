@@ -37,6 +37,13 @@ html {
 }
 
 body {
+  background:rgba(0,0,0,0.0);
+}
+
+body#nico-body {
   overflow: hidden;
-  background:rgba(0,0,0,0.5);
+}
+
+body#log-body {
+  overflow-y: scroll;
 }

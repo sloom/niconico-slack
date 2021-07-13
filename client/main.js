@@ -1,50 +1,57 @@
-const { app, BrowserWindow, screen, ipcMain, globalShortcut, Tray, Menu, dialog } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, globalShortcut, Tray, Menu, shell } = require('electron');
 const path = require('path');
-const yaml = require('js-yaml');
 const isMac = process.platform === 'darwin';
 const devToolHotKey = isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I';
 const prompt = require('electron-prompt')
-const Store = require('electron-store');
-const store = new Store({
-    fileExtension: 'yaml',
-    serialize: yaml.dump,
-    deserialize: yaml.load,
-    cwd: path.join(app.getPath('appData'), app.getName()),
-    name: 'default' 
-});
-// ランタイムで環境変数変えられると表示に齟齬が生じるので起動時に解決
-const targetHost = resolveHost();
+const config = require('./Config');
+const slackMessage = require('./SlackMessage');
+const logger = require('./Logger');
 // getter が無いので true を初期値としてこちらでも管理
 let ignoreMouseEvents = true;
 
-let mainWindow;
-
-function resolveHost() {
-    // ランタイムの環境変数 > 設定ファイル(default.yaml) > package.json 埋め込み値
-    const runtimeValue = process.env.NICONICO_SLACK_HOSTNAME;
-    const configValue = store.get('config.hostname');
-    const embeddedValue = require('./package.json').config.niconico_slack_hostname;
-    console.log(`runtime : ${runtimeValue}, config: ${configValue}, embedded: ${embeddedValue}`);
-    const targetHost = runtimeValue || configValue || embeddedValue;
-    console.log(`Hostname : ${targetHost}`);
-    return targetHost;
-}
+let niconicoWindow;
+let logWindow;
 
 function addIpcListener() {
-    ipcMain.on('get-host-config', (event, arg) => {
-        event.returnValue = targetHost;
-    });
     ipcMain.on('get-primary-display-size', (event, arg) => {
         event.returnValue = screen.getPrimaryDisplay().size;
     });
 }
 
+function createLogWindow() {
+    const size = screen.getPrimaryDisplay().size;
+    const width = size.width / 4;
+    const height = size.height - 150;
+    const offsetx = size.width - width;
+    logWindow = new BrowserWindow({
+        x: offsetx,
+        y: 100,
+        width: width,
+        height: height,
+        show: false,
+        webPreferences: {
+            preload: path.join(app.getAppPath(), 'logRenderer.js')
+        }
+    });
+    logWindow.loadURL('file://' + __dirname + '/log.html');
+    logWindow.on('close', (event) => {
+        logWindow.hide();
+        event.preventDefault();
+    });
+}
+
+function openLog() {
+    logWindow.show();
+}
+
 function updateHost() {
-    const currentHost = targetHost;
     prompt({
-        title: 'Change Host',
-        label: 'Hostname:',
-        value: targetHost,
+        title: 'Hostname',
+        useHtmlLabel: true,
+        label: '<small>*If the environment variable <b>NICONICO_SLACK_HOSTNAME</b> is set, <br>it will take precedence and this value will not be used.</small>',
+        value: config.resolveHost(),
+        height: 200,
+        width: 500,
         resizable: true,
         alwaysOnTop: true
     })
@@ -52,15 +59,9 @@ function updateHost() {
             if (!r) {
                 console.log('user cancelled');
             } else {
-                if (targetHost !== r) {
-                    store.set('config.hostname', r);
-                    dialog.showMessageBoxSync(mainWindow, {
-                        title: app.getName(),
-                        message: 'Reboot is required. Press OK to restart. \nIf you are currently running this program unpackaged, you will need to restart it.',
-                        buttons: ['OK']
-                    });
-                    app.relaunch();
-                    app.quit();
+                if (config.resolveHost() !== r) {
+                    config.set('config.hostname', r);
+                    connectWebSocket(config.resolveHost());
                 }
             }
         })
@@ -73,17 +74,19 @@ function setupTray() {
     const tray = new Tray(isMac ? macIconPath : 'resources/icon.ico');
     const contextMenu = Menu.buildFromTemplate([
         { label: 'Change Host', type: 'normal', click: () => { updateHost() } },
+        { label: 'Open Log', type: 'normal', click: () => { openLog() } },
+
         { type: 'separator' },
         {
-            label: 'alwaysOnTop', type: 'checkbox', checked: mainWindow.isAlwaysOnTop(), click: () => {
-                mainWindow.setAlwaysOnTop(!mainWindow.isAlwaysOnTop())
+            label: 'alwaysOnTop', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: () => {
+                niconicoWindow.setAlwaysOnTop(!niconicoWindow.isAlwaysOnTop())
             }
         },
-        { label: 'openDevTools', type: 'normal', click: () => { mainWindow.openDevTools(); } },
+        { label: 'openDevTools', type: 'normal', click: () => { niconicoWindow.openDevTools(); } },
         { type: 'separator' },
         { label: 'Exit', type: 'normal', click: () => { app.quit() } },
     ]);
-    tray.setToolTip(app.getName() + "\nHost: " + targetHost);
+    tray.setToolTip(app.getName());
     tray.setContextMenu(contextMenu)
     tray.on('click', () => {
         tray.popUpContextMenu();
@@ -131,9 +134,20 @@ function setupDevTools(browserWindow) {
     });
 }
 
+function subscribeSlackMessage() {
+    slackMessage.on('slack-message', (message) => {
+        niconicoWindow.webContents.send('slack-message', message);
+        logWindow.webContents.send('slack-message', message);
+    });
+}
+
+function connectWebSocket(host) {
+    slackMessage.connect(host);
+}
+
 function createWindow() {
     const size = screen.getPrimaryDisplay().size;
-    mainWindow = new BrowserWindow({
+    niconicoWindow = new BrowserWindow({
         left: 0,
         top: 0,
         width: size.width,
@@ -145,28 +159,28 @@ function createWindow() {
         hasShadow: false,
         alwaysOnTop: true,
         webPreferences: {
-            preload: path.join(app.getAppPath(), 'renderer.js')
+            preload: path.join(app.getAppPath(), 'niconicoRenderer.js')
         }
     });
-    mainWindow.setIgnoreMouseEvents(ignoreMouseEvents);
-    mainWindow.maximize();
-    mainWindow.loadURL('file://' + __dirname + '/index.html');
-    mainWindow.on('closed', function () {
-        mainWindow = null;
+    niconicoWindow.setIgnoreMouseEvents(ignoreMouseEvents);
+    niconicoWindow.maximize();
+    niconicoWindow.loadURL('file://' + __dirname + '/index.html');
+    niconicoWindow.on('closed', function () {
+        niconicoWindow = null;
     });
 
-    mainWindow.on('ready-to-show', () => {
-        mainWindow.show();
+    niconicoWindow.on('ready-to-show', () => {
+        niconicoWindow.show();
     });
 
     // CSS の指定が効かない場合があることのワークアラウンド
     // https://github.com/electron/electron/issues/3534
-    const contents = mainWindow.webContents;
+    const contents = niconicoWindow.webContents;
     contents.on('dom-ready', () => {
         contents.insertCSS('html,body{ overflow: hidden !important; }');
     });
 
-    setupDevTools(mainWindow);
+    setupDevTools(niconicoWindow);
 }
 
 app.on('window-all-closed', function () {
@@ -176,9 +190,14 @@ app.on('window-all-closed', function () {
 });
 
 app.on('activate', function () {
-    if (mainWindow === null) {
+    if (niconicoWindow === null) {
         createWindow();
     }
 });
 
-app.whenReady().then(addIpcListener).then(createWindow).then(setupTray);
+app.whenReady().then(addIpcListener)
+    .then(createWindow)
+    .then(createLogWindow)
+    .then(setupTray)
+    .then(subscribeSlackMessage)
+    .then(connectWebSocket(config.resolveHost()));

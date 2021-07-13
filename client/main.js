@@ -10,6 +10,7 @@ const logger = require('./Logger');
 let ignoreMouseEvents = true;
 
 let niconicoWindow;
+let logWindow;
 
 function addIpcListener() {
     ipcMain.on('get-primary-display-size', (event, arg) => {
@@ -17,9 +18,30 @@ function addIpcListener() {
     });
 }
 
+function createLogWindow() {
+    const size = screen.getPrimaryDisplay().size;
+    const width = size.width / 4;
+    const height = size.height - 150;
+    const offsetx = size.width - width;
+    logWindow = new BrowserWindow({
+        x: offsetx,
+        y: 100,
+        width: width,
+        height: height,
+        show: false,
+        webPreferences: {
+            preload: path.join(app.getAppPath(), 'logRenderer.js')
+        }
+    });
+    logWindow.loadURL('file://' + __dirname + '/log.html');
+    logWindow.on('close', (event) => {
+        logWindow.hide();
+        event.preventDefault();
+    });
+}
+
 function openLog() {
-    const fileTransports = logger.transports.file;
-    shell.openExternal(path.join(fileTransports.dirname, fileTransports.filename));
+    logWindow.show();
 }
 
 function updateHost() {
@@ -115,7 +137,7 @@ function setupDevTools(browserWindow) {
 function subscribeSlackMessage() {
     slackMessage.on('slack-message', (message) => {
         niconicoWindow.webContents.send('slack-message', message);
-        logger.info(message.trim());
+        logWindow.webContents.send('slack-message', message);
     });
 }
 
@@ -173,4 +195,9 @@ app.on('activate', function () {
     }
 });
 
-app.whenReady().then(addIpcListener).then(createWindow).then(setupTray).then(subscribeSlackMessage).then(connectWebSocket(config.resolveHost()));
+app.whenReady().then(addIpcListener)
+    .then(createWindow)
+    .then(createLogWindow)
+    .then(setupTray)
+    .then(subscribeSlackMessage)
+    .then(connectWebSocket(config.resolveHost()));

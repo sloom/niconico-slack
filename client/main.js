@@ -40,6 +40,7 @@ function createLogWindow() {
             preload: path.join(app.getAppPath(), 'logRenderer.js')
         }
     });
+    logWindow.setMenu(null);
     logWindow.loadURL('file://' + __dirname + '/log.html');
     logWindow.on('close', (event) => {
         logWindow.hide();
@@ -82,7 +83,7 @@ function allClose() {
         try {
             niconicoWindow.close();
             niconicoWindow.destroy();
-        } finally {
+        } catch(err) {
             niconicoWindow = null;
         }
     }
@@ -90,7 +91,7 @@ function allClose() {
         try {
             logWindow.close();
             logWindow.destroy();
-        } finally {
+        } catch(err) {
             logWindow = null;
         }
     }
@@ -229,7 +230,9 @@ app.on('activate', function () {
     }
 });
 
-app.whenReady().then(addIpcListener)
+app.whenReady()
+    .then(initialize)
+    .then(addIpcListener)
     .then(createWindow)
     .then(createLogWindow)
     .then(setupTray)

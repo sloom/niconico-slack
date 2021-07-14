@@ -205,15 +205,7 @@ function createWindow() {
 }
 
 app.on('window-all-closed', function () {
-    if (!isMac) {
-        app.quit();
-    }
-});
-
-app.on('activate', function () {
-    if (niconicoWindow === null) {
-        createWindow();
-    }
+    app.quit();
 });
 
 function logAppInfo() {

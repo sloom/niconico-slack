@@ -10,6 +10,7 @@ const store = new Store({
     cwd: path.join(app.getPath('appData'), app.getName()),
     name: 'default'
 });
+const logger = require('./Logger');
 
 class Config {
     constructor() {
@@ -30,10 +31,10 @@ class Config {
         const configValue = store.get('config.hostname');
         // package.json の埋め込み値
         const embeddedValue = packageJson.config.niconico_slack_hostname;
-        console.log(`runtime : ${runtimeValue}, config: ${configValue}, embedded: ${embeddedValue}`);
+        logger.info(`Host env : ${runtimeValue}, config: ${configValue}, embedded: ${embeddedValue}`);
         // 優先順位: ランタイムの環境変数 > 設定ファイル > package.json 埋め込み値
         const targetHost = runtimeValue || configValue || embeddedValue;
-        console.log(`Hostname : ${targetHost}`);
+        logger.info(`Target host : ${targetHost}`);
         return targetHost;
     }
 

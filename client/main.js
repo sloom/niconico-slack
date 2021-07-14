@@ -1,13 +1,13 @@
-const { app, BrowserWindow, screen, ipcMain, globalShortcut, Tray, Menu, shell } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
+const logger = require('./Logger');
 const path = require('path');
 const isMac = process.platform === 'darwin';
-const devToolHotKey = isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I';
-const prompt = require('electron-prompt')
 const config = require('./Config');
 const slackMessage = require('./SlackMessage');
-const logger = require('./Logger');
+const { clearInterval } = require('timers');
 // getter が無いので true を初期値としてこちらでも管理
 let ignoreMouseEvents = true;
+let pollIntervalId;
 
 let niconicoWindow;
 let logWindow;
@@ -19,7 +19,28 @@ function addIpcListener() {
     });
 }
 
+function pollSetForground(setAlwaysOnTop) {
+    // alwaysOnTop 指定でもしばしば裏に回ってしまうワークアラウンド
+    if (!setAlwaysOnTop) {
+        clearInterval(pollIntervalId);
+    } else {
+        pollIntervalId = setInterval(() => {
+            if (niconicoWindow) {
+                niconicoWindow.focus();
+                niconicoWindow.alwaysOnTop = true;
+            }
+        }, 1000);
+    }
+}
+
 function initialize() {
+    process.on('uncaughtException', (err) => {
+        logger.error("electron:uncaughtException");
+        if (err) {
+            logger.error(err);
+            logger.error(err.stack);
+        }
+    });
     app.on('before-quit', () => {
         appQuiting = true;
     });
@@ -55,6 +76,7 @@ function openLog() {
 }
 
 function updateHost() {
+    const prompt = require('electron-prompt')
     prompt({
         title: 'Hostname',
         useHtmlLabel: true,
@@ -67,7 +89,7 @@ function updateHost() {
     })
         .then((r) => {
             if (!r) {
-                console.log('user cancelled');
+                logger.info('user cancelled');
             } else {
                 if (config.resolveHost() !== r) {
                     config.set('config.hostname', r);
@@ -83,7 +105,7 @@ function allClose() {
         try {
             niconicoWindow.close();
             niconicoWindow.destroy();
-        } catch(err) {
+        } catch (err) {
             niconicoWindow = null;
         }
     }
@@ -91,7 +113,7 @@ function allClose() {
         try {
             logWindow.close();
             logWindow.destroy();
-        } catch(err) {
+        } catch (err) {
             logWindow = null;
         }
     }
@@ -109,7 +131,8 @@ function setupTray() {
         { type: 'separator' },
         {
             label: 'alwaysOnTop', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: () => {
-                niconicoWindow.setAlwaysOnTop(!niconicoWindow.isAlwaysOnTop())
+                niconicoWindow.setAlwaysOnTop(!niconicoWindow.isAlwaysOnTop());
+                updatePollSetForground();
             }
         },
         { label: 'openDevTools', type: 'normal', click: () => { niconicoWindow.openDevTools(); } },
@@ -124,49 +147,13 @@ function setupTray() {
     tray.setToolTip(app.getName());
     tray.setContextMenu(contextMenu)
     tray.on('click', () => {
+        niconicoWindow.focus();
         tray.popUpContextMenu();
     })
     tray.on('right-click', () => {
+        niconicoWindow.focus();
         tray.popUpContextMenu();
     })
-}
-
-function toggleDevTools(browserWindow) {
-    if (browserWindow.isDevToolsOpened()) {
-        browserWindow.closeDevTools();
-    } else {
-        browserWindow.openDevTools();
-    }
-}
-
-function registerLocalShortcut(browserWindow) {
-    globalShortcut.register(devToolHotKey, () => {
-        toggleDevTools(browserWindow);
-    });
-}
-
-function unregisterLocalShortcut(browserWindow) {
-    try {
-        globalShortcut.unregister(devToolHotKey);
-    } catch (e) {
-        // no-op
-        console.warn(`unregister shortcut failed. error = ${e}`);
-    }
-}
-
-function setupDevTools(browserWindow) {
-    app.on('browser-window-blur', () => {
-        unregisterLocalShortcut();
-    });
-    app.on('browser-window-focus', () => {
-        registerLocalShortcut(browserWindow);
-    });
-    app.on('browser-window-created', () => {
-        registerLocalShortcut(browserWindow);
-    });
-    app.on('window-all-closed', () => {
-        unregisterLocalShortcut();
-    });
 }
 
 function subscribeSlackMessage() {
@@ -195,7 +182,8 @@ function createWindow() {
         alwaysOnTop: true,
         webPreferences: {
             preload: path.join(app.getAppPath(), 'niconicoRenderer.js')
-        }
+        },
+        focusable: false
     });
     niconicoWindow.setIgnoreMouseEvents(ignoreMouseEvents);
     niconicoWindow.maximize();
@@ -214,8 +202,6 @@ function createWindow() {
     contents.on('dom-ready', () => {
         contents.insertCSS('html,body{ overflow: hidden !important; }');
     });
-
-    setupDevTools(niconicoWindow);
 }
 
 app.on('window-all-closed', function () {
@@ -230,11 +216,30 @@ app.on('activate', function () {
     }
 });
 
+function logAppInfo() {
+    try {
+        logger.info('-------------------------------------------------');
+        logger.info(`commandLine: ${process.argv.join(' ')}`);
+        logger.info(`electron version: ${process.versions['electron']}`);
+        logger.info(`chromium version: ${process.versions['chrome']}`);
+        logger.info(`app.name: ${app.getName()}`);
+        logger.info(`app.getVersion(): ${app.getVersion()}`);
+        logger.info(`app.getLocale(): ${app.getLocale()}`);
+        logger.info(`app.getPath('exe'): ${app.getPath('exe')}`);
+        logger.info(`app.getPath('temp'): ${app.getPath('temp')}`);
+        logger.info('-------------------------------------------------');
+    } catch (err) {
+        logger.warn('Exception occurred while log environment info. Skipping.', err);
+    }
+}
+
 app.whenReady()
+    .then(logAppInfo())
     .then(initialize)
     .then(addIpcListener)
     .then(createWindow)
     .then(createLogWindow)
     .then(setupTray)
     .then(subscribeSlackMessage)
-    .then(connectWebSocket(config.resolveHost()));
+    .then(connectWebSocket(config.resolveHost()))
+    .then(pollSetForground(true));

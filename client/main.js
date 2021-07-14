@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu, Notification } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
 const isMac = process.platform === 'darwin';
 const logger = require('./Logger');
 const path = require('path');
@@ -149,15 +149,21 @@ function setupTray() {
 
         { type: 'separator' },
         {
-            label: 'alwaysOnTop', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: (r) => {
+            label: 'Always on top', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: (r) => {
                 updateAlwaysOnTop(r.checked);
             }
         },
-        { label: 'openDevTools', type: 'normal', click: () => {
-            updateWindowAttributeForDebug();
-            niconicoWindow.openDevTools();
-            new Notification({ title: app.getName(), body: `Changed window attribute to start DevTools. Please restart the application after debugging.`}).show();
-        } },
+        {
+            label: 'Open Chrome DevTools', type: 'normal', click: () => {
+                updateWindowAttributeForDebug();
+                niconicoWindow.openDevTools();
+                const message = `Changed window attribute to start Chrome DevTools. Please restart the application after debugging.`;
+                tray.displayBalloon({
+                    title: app.getName(),
+                    content: message
+                });
+            }
+        },
         { type: 'separator' },
         {
             label: 'Exit', type: 'normal', click: () => {
@@ -206,8 +212,8 @@ function createWindow() {
             preload: path.join(app.getAppPath(), 'niconicoRenderer.js')
         },
         focusable: false    // Windows における前面移動時の flash を避けるため。
-                            // macOS では app.dock.hide() で Dock も隠せるが、
-                            // 強制終了手段が塞がれる可能性があることからやらない
+        // macOS では app.dock.hide() で Dock も隠せるが、
+        // 強制終了手段が塞がれる可能性があることからやらない
     });
     niconicoWindow.setIgnoreMouseEvents(true);
     niconicoWindow.maximize();

@@ -1,13 +1,11 @@
-const { app, BrowserWindow, screen, ipcMain, globalShortcut, Tray, Menu, shell } = require('electron');
-const path = require('path');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, Notification } = require('electron');
 const isMac = process.platform === 'darwin';
-const devToolHotKey = isMac ? 'Alt+Command+I' : 'Ctrl+Shift+I';
-const prompt = require('electron-prompt')
+const logger = require('./Logger');
+const path = require('path');
 const config = require('./Config');
 const slackMessage = require('./SlackMessage');
-const logger = require('./Logger');
-// getter が無いので true を初期値としてこちらでも管理
-let ignoreMouseEvents = true;
+const { title } = require('process');
+let pollIntervalId;
 
 let niconicoWindow;
 let logWindow;
@@ -19,7 +17,50 @@ function addIpcListener() {
     });
 }
 
+function updateAlwaysOnTop(setAlwaysOnTop) {
+    if (niconicoWindow) {
+        niconicoWindow.setAlwaysOnTop(setAlwaysOnTop);
+        pollSetForground(setAlwaysOnTop);
+    }
+}
+
+function updateWindowAttributeForDebug() {
+    // 設定がそのままだと devtools 起動時画面操作ができないケースがあるため、全て解除。
+    if (niconicoWindow) {
+        updateAlwaysOnTop(false);
+        niconicoWindow.setSize(800, 600);
+        niconicoWindow.setClosable(true);
+        niconicoWindow.setFullScreenable(true);
+        niconicoWindow.setIgnoreMouseEvents(false);
+        niconicoWindow.frame = true;
+        niconicoWindow.setBackgroundColor('#fff');
+        niconicoWindow.setResizable(true);
+        niconicoWindow.setFocusable(true);
+    }
+}
+
+function pollSetForground(setAlwaysOnTop) {
+    // alwaysOnTop 指定でもしばしば裏に回ってしまうワークアラウンド
+    if (!setAlwaysOnTop) {
+        clearInterval(pollIntervalId);
+    } else {
+        pollIntervalId = setInterval(() => {
+            if (niconicoWindow) {
+                niconicoWindow.focus();
+                niconicoWindow.alwaysOnTop = true;
+            }
+        }, 1000);
+    }
+}
+
 function initialize() {
+    process.on('uncaughtException', (err) => {
+        logger.error("electron:uncaughtException");
+        if (err) {
+            logger.error(err);
+            logger.error(err.stack);
+        }
+    });
     app.on('before-quit', () => {
         appQuiting = true;
     });
@@ -55,6 +96,7 @@ function openLog() {
 }
 
 function updateHost() {
+    const prompt = require('electron-prompt')
     prompt({
         title: 'Hostname',
         useHtmlLabel: true,
@@ -67,7 +109,7 @@ function updateHost() {
     })
         .then((r) => {
             if (!r) {
-                console.log('user cancelled');
+                logger.info('user cancelled');
             } else {
                 if (config.resolveHost() !== r) {
                     config.set('config.hostname', r);
@@ -83,7 +125,7 @@ function allClose() {
         try {
             niconicoWindow.close();
             niconicoWindow.destroy();
-        } catch(err) {
+        } catch (err) {
             niconicoWindow = null;
         }
     }
@@ -91,7 +133,7 @@ function allClose() {
         try {
             logWindow.close();
             logWindow.destroy();
-        } catch(err) {
+        } catch (err) {
             logWindow = null;
         }
     }
@@ -108,11 +150,29 @@ function setupTray() {
 
         { type: 'separator' },
         {
-            label: 'alwaysOnTop', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: () => {
-                niconicoWindow.setAlwaysOnTop(!niconicoWindow.isAlwaysOnTop())
+            label: 'Always on top', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: (r) => {
+                updateAlwaysOnTop(r.checked);
             }
         },
-        { label: 'openDevTools', type: 'normal', click: () => { niconicoWindow.openDevTools(); } },
+        {
+            label: 'Open Chrome DevTools', type: 'normal', click: () => {
+                updateWindowAttributeForDebug();
+                niconicoWindow.openDevTools();
+                const title = app.getName();
+                const message = `Changed window attribute to start Chrome DevTools. Please restart the application after debugging.`;
+                if (isMac) {
+                    new Notification({
+                        title: title,
+                        body: message
+                    }).show();
+                } else {
+                    tray.displayBalloon({
+                        title: title,
+                        content: message
+                    });
+                }
+            }
+        },
         { type: 'separator' },
         {
             label: 'Exit', type: 'normal', click: () => {
@@ -124,49 +184,13 @@ function setupTray() {
     tray.setToolTip(app.getName());
     tray.setContextMenu(contextMenu)
     tray.on('click', () => {
+        niconicoWindow.focus();
         tray.popUpContextMenu();
     })
     tray.on('right-click', () => {
+        niconicoWindow.focus();
         tray.popUpContextMenu();
     })
-}
-
-function toggleDevTools(browserWindow) {
-    if (browserWindow.isDevToolsOpened()) {
-        browserWindow.closeDevTools();
-    } else {
-        browserWindow.openDevTools();
-    }
-}
-
-function registerLocalShortcut(browserWindow) {
-    globalShortcut.register(devToolHotKey, () => {
-        toggleDevTools(browserWindow);
-    });
-}
-
-function unregisterLocalShortcut(browserWindow) {
-    try {
-        globalShortcut.unregister(devToolHotKey);
-    } catch (e) {
-        // no-op
-        console.warn(`unregister shortcut failed. error = ${e}`);
-    }
-}
-
-function setupDevTools(browserWindow) {
-    app.on('browser-window-blur', () => {
-        unregisterLocalShortcut();
-    });
-    app.on('browser-window-focus', () => {
-        registerLocalShortcut(browserWindow);
-    });
-    app.on('browser-window-created', () => {
-        registerLocalShortcut(browserWindow);
-    });
-    app.on('window-all-closed', () => {
-        unregisterLocalShortcut();
-    });
 }
 
 function subscribeSlackMessage() {
@@ -195,9 +219,12 @@ function createWindow() {
         alwaysOnTop: true,
         webPreferences: {
             preload: path.join(app.getAppPath(), 'niconicoRenderer.js')
-        }
+        },
+        focusable: false    // Windows における前面移動時の flash を避けるため。
+        // macOS では app.dock.hide() で Dock も隠せるが、
+        // 強制終了手段が塞がれる可能性があることからやらない
     });
-    niconicoWindow.setIgnoreMouseEvents(ignoreMouseEvents);
+    niconicoWindow.setIgnoreMouseEvents(true);
     niconicoWindow.maximize();
     niconicoWindow.loadURL('file://' + __dirname + '/index.html');
     niconicoWindow.on('closed', function () {
@@ -214,27 +241,36 @@ function createWindow() {
     contents.on('dom-ready', () => {
         contents.insertCSS('html,body{ overflow: hidden !important; }');
     });
-
-    setupDevTools(niconicoWindow);
 }
 
 app.on('window-all-closed', function () {
-    if (!isMac) {
-        app.quit();
-    }
+    app.quit();
 });
 
-app.on('activate', function () {
-    if (niconicoWindow === null) {
-        createWindow();
+function logAppInfo() {
+    try {
+        logger.info('-------------------------------------------------');
+        logger.info(`commandLine: ${process.argv.join(' ')}`);
+        logger.info(`electron version: ${process.versions['electron']}`);
+        logger.info(`chromium version: ${process.versions['chrome']}`);
+        logger.info(`app.name: ${app.getName()}`);
+        logger.info(`app.getVersion(): ${app.getVersion()}`);
+        logger.info(`app.getLocale(): ${app.getLocale()}`);
+        logger.info(`app.getPath('exe'): ${app.getPath('exe')}`);
+        logger.info(`app.getPath('temp'): ${app.getPath('temp')}`);
+        logger.info('-------------------------------------------------');
+    } catch (err) {
+        logger.warn('Exception occurred while log environment info. Skipping.', err);
     }
-});
+}
 
 app.whenReady()
+    .then(logAppInfo())
     .then(initialize)
     .then(addIpcListener)
     .then(createWindow)
     .then(createLogWindow)
     .then(setupTray)
     .then(subscribeSlackMessage)
-    .then(connectWebSocket(config.resolveHost()));
+    .then(connectWebSocket(config.resolveHost()))
+    .then(pollSetForground(true));

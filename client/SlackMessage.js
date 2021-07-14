@@ -3,6 +3,7 @@ const EventEmitter2 = require('eventemitter2');
 const emoji = require('./resources/slack_emoji.json');
 const reRegExp = /[\\^$.*+?()[\]{}|]/g;
 const reHasRegExp = new RegExp(reRegExp.source);
+const logger = require('./Logger');
 
 class SlackMessage extends EventEmitter2 {
 
@@ -35,13 +36,13 @@ class SlackMessage extends EventEmitter2 {
         }
         this.socketio = io('https://' + targetHost);
         this.socketio.on('connection', () => {
-            console.log('connected!');
+            logger.debug('connected!');
         });
         this.socketio.on('connect_error', (err) => {
-            console.error(`connect failed. err=${err}`);
+            logger.warn(`connect failed. err=${err}`);
         });
         this.socketio.on('message', (msg) => {
-            console.log('message receive: ' + msg);
+            logger.info('message receive: ' + msg);
             if (!msg) { return; } // msgがnullの時があるので
             msg = msg.replace(/<@.*>/, '');
             const columnCount = (msg.match(this.emojiColumn) || []).length;

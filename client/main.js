@@ -1,9 +1,10 @@
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, Notification } = require('electron');
 const isMac = process.platform === 'darwin';
 const logger = require('./Logger');
 const path = require('path');
 const config = require('./Config');
 const slackMessage = require('./SlackMessage');
+const { title } = require('process');
 let pollIntervalId;
 
 let niconicoWindow;
@@ -157,11 +158,19 @@ function setupTray() {
             label: 'Open Chrome DevTools', type: 'normal', click: () => {
                 updateWindowAttributeForDebug();
                 niconicoWindow.openDevTools();
+                const title = app.getName();
                 const message = `Changed window attribute to start Chrome DevTools. Please restart the application after debugging.`;
-                tray.displayBalloon({
-                    title: app.getName(),
-                    content: message
-                });
+                if (isMac) {
+                    new Notification({
+                        title: title,
+                        body: message
+                    }).show();
+                } else {
+                    tray.displayBalloon({
+                        title: title,
+                        content: message
+                    });
+                }
             }
         },
         { type: 'separator' },

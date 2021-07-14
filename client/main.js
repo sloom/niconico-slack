@@ -1,12 +1,9 @@
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, Notification } = require('electron');
+const isMac = process.platform === 'darwin';
 const logger = require('./Logger');
 const path = require('path');
-const isMac = process.platform === 'darwin';
 const config = require('./Config');
 const slackMessage = require('./SlackMessage');
-const { clearInterval } = require('timers');
-// getter が無いので true を初期値としてこちらでも管理
-let ignoreMouseEvents = true;
 let pollIntervalId;
 
 let niconicoWindow;
@@ -17,6 +14,28 @@ function addIpcListener() {
     ipcMain.on('get-primary-display-size', (event, arg) => {
         event.returnValue = screen.getPrimaryDisplay().size;
     });
+}
+
+function updateAlwaysOnTop(setAlwaysOnTop) {
+    if (niconicoWindow) {
+        niconicoWindow.setAlwaysOnTop(setAlwaysOnTop);
+        pollSetForground(setAlwaysOnTop);
+    }
+}
+
+function updateWindowAttributeForDebug() {
+    // 設定がそのままだと devtools 起動時画面操作ができないケースがあるため、全て解除。
+    if (niconicoWindow) {
+        updateAlwaysOnTop(false);
+        niconicoWindow.setSize(800, 600);
+        niconicoWindow.setClosable(true);
+        niconicoWindow.setFullScreenable(true);
+        niconicoWindow.setIgnoreMouseEvents(false);
+        niconicoWindow.frame = true;
+        niconicoWindow.setBackgroundColor('#fff');
+        niconicoWindow.setResizable(true);
+        niconicoWindow.setFocusable(true);
+    }
 }
 
 function pollSetForground(setAlwaysOnTop) {
@@ -130,12 +149,15 @@ function setupTray() {
 
         { type: 'separator' },
         {
-            label: 'alwaysOnTop', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: () => {
-                niconicoWindow.setAlwaysOnTop(!niconicoWindow.isAlwaysOnTop());
-                updatePollSetForground();
+            label: 'alwaysOnTop', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: (r) => {
+                updateAlwaysOnTop(r.checked);
             }
         },
-        { label: 'openDevTools', type: 'normal', click: () => { niconicoWindow.openDevTools(); } },
+        { label: 'openDevTools', type: 'normal', click: () => {
+            updateWindowAttributeForDebug();
+            niconicoWindow.openDevTools();
+            new Notification({ title: app.getName(), body: `Changed window attribute to start DevTools. Please restart the application after debugging.`}).show();
+        } },
         { type: 'separator' },
         {
             label: 'Exit', type: 'normal', click: () => {
@@ -183,9 +205,11 @@ function createWindow() {
         webPreferences: {
             preload: path.join(app.getAppPath(), 'niconicoRenderer.js')
         },
-        focusable: false
+        focusable: false    // Windows における前面移動時の flash を避けるため。
+                            // macOS では app.dock.hide() で Dock も隠せるが、
+                            // 強制終了手段が塞がれる可能性があることからやらない
     });
-    niconicoWindow.setIgnoreMouseEvents(ignoreMouseEvents);
+    niconicoWindow.setIgnoreMouseEvents(true);
     niconicoWindow.maximize();
     niconicoWindow.loadURL('file://' + __dirname + '/index.html');
     niconicoWindow.on('closed', function () {

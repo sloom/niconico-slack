@@ -39,7 +39,9 @@ class nicommentJS {
         let x = this.width;
         let y = Math.random() * (this.height - this.fontSize*2);
         let comment = document.createElement('div');
-
+        // Slack のメッセージ送信時点でエスケープされている風ではあるが、念の為XSS対策
+        const message = document.createTextNode(comment);
+        comment.appendChild(message);
         comment.innerHTML = text;
         comment.x = x;
         comment.y = y;

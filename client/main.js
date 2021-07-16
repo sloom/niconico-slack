@@ -4,7 +4,6 @@ const logger = require('./Logger');
 const path = require('path');
 const config = require('./Config');
 const slackMessage = require('./SlackMessage');
-const { title } = require('process');
 let pollIntervalId;
 
 let niconicoWindow;
@@ -95,6 +94,31 @@ function openLog() {
     logWindow.show();
 }
 
+function openDevToolsForLogWindow() {
+    logWindow.openDevTools();
+}
+
+function debugMessage() {
+    const debugMessages = [
+        'おめでとう',
+        '888888', ':+1::+1::+1:',
+        ':tada::tada::tada:',
+        'いいね!',
+        ':smile::smile::smile::smile:',
+        ':clap::clap::clap::clap:'
+    ];
+    const delayMax = 3000;
+    const delayMin = 0;
+    for (const index in debugMessages) {
+        const delay = Math.floor(Math.random() * (delayMax - delayMin + 1) + delayMin);
+        setTimeout(() => {
+            niconicoWindow.webContents.send('slack-message', slackMessage.convertEntity(debugMessages[index]));
+            logWindow.webContents.send('slack-message', slackMessage.convertEntity(debugMessages[index]));
+        }, delay);
+    }
+}
+
+
 function updateHost() {
     const prompt = require('electron-prompt')
     prompt({
@@ -145,33 +169,61 @@ function setupTray() {
     const macIconPath = process.env.NODE_ENV === "debug" ? 'resources/icon_22.png' : path.join(appPath, 'Contents', 'Resources', 'icon_22.png');
     const tray = new Tray(isMac ? macIconPath : 'resources/icon.ico');
     const contextMenu = Menu.buildFromTemplate([
-        { label: 'Change Host', type: 'normal', click: () => { updateHost() } },
         { label: 'Open Log', type: 'normal', click: () => { openLog() } },
-
         { type: 'separator' },
         {
-            label: 'Always on top', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: (r) => {
-                updateAlwaysOnTop(r.checked);
-            }
+            label: 'Settings',
+            submenu: [
+                { label: 'Change Host', type: 'normal', click: () => { updateHost() } },
+                {
+                    label: 'Always on top', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: (r) => {
+                        updateAlwaysOnTop(r.checked);
+                    }
+                },
+            ]
         },
+        { type: 'separator' },
         {
-            label: 'Open Chrome DevTools', type: 'normal', click: () => {
-                updateWindowAttributeForDebug();
-                niconicoWindow.openDevTools();
-                const title = app.getName();
-                const message = `Changed window attribute to start Chrome DevTools. Please restart the application after debugging.`;
-                if (isMac) {
-                    new Notification({
-                        title: title,
-                        body: message
-                    }).show();
-                } else {
-                    tray.displayBalloon({
-                        title: title,
-                        content: message
-                    });
+            label: 'Debug',
+            submenu: [
+                {
+                    label: 'DevTools',
+                    submenu: [
+                        {
+                            label: 'Message Window', type: 'normal', click: () => {
+                                updateWindowAttributeForDebug();
+                                niconicoWindow.openDevTools();
+                                const title = app.getName();
+                                const message = `Changed window attribute to start Chrome DevTools. Please restart the application after debugging.`;
+                                if (isMac) {
+                                    new Notification({
+                                        title: title,
+                                        body: message
+                                    }).show();
+                                } else {
+                                    tray.displayBalloon({
+                                        title: title,
+                                        content: message
+                                    });
+                                }
+                            }
+                        },
+                        {
+                            label: 'Log Window', type: 'normal', click: () => {
+                                openDevToolsForLogWindow();
+                            }
+                        },
+
+                    ]
+                },
+                {
+                    label: 'Simulate Message',
+                    type: 'normal',
+                    click: () => {
+                        debugMessage();
+                    }
                 }
-            }
+            ]
         },
         { type: 'separator' },
         {

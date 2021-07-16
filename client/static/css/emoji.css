@@ -35,15 +35,3 @@
 html {
   font-family: MyFontFamily, sans-serif;
 }
-
-body {
-  background:rgba(0,0,0,0.0);
-}
-
-body#nico-body {
-  overflow: hidden;
-}
-
-body#log-body {
-  overflow-y: scroll;
-}

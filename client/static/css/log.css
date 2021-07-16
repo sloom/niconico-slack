@@ -1,0 +1,30 @@
+@import url("./emoji.css");
+
+.box1 {
+  padding: 0.5em 1em;
+  margin: 2em 0;
+  font-weight: bold;
+  border: solid 3px #000;
+  border-radius: 10px;
+}
+
+.box1 p {
+  margin: 0; 
+  padding: 0;
+}
+
+.box2 {
+  padding: 0.5em 1em;
+  margin: 0.5em 0;
+  color: #232323;
+  border: solid 1px #CCC;
+}
+
+.box2 p {
+  margin: 0; 
+  padding: 0;
+}
+
+body {
+  overflow-y: scroll;
+}

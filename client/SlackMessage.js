@@ -25,11 +25,27 @@ class SlackMessage extends EventEmitter2 {
             : string;
     }
 
+    convertEntity(msg) {
+        const columnCount = (msg.match(this.emojiColumn) || []).length;
+        if (columnCount < 2) {
+            return msg;
+        }
+        for (var emojiRegExpKey in this.emojiRegExps) {
+            const emojiRegExp = this.emojiRegExps[emojiRegExpKey];
+            if (msg.match(emojiRegExp)) {
+                const entity = emoji[emojiRegExpKey];
+                msg = msg.replace(emojiRegExp, entity);
+                // break すると複数の絵文字に変換できないのでしない
+            }
+        }
+        return msg;
+    }
+
     connect(targetHost) {
         if (this.socketio) {
             try {
                 this.socketio.disconnect();
-            } catch(ignore) {
+            } catch (ignore) {
                 console.warn(`Error occurred while disconnecting socket. Ignoring. err=${err}`);
             }
             this.socketio = null;
@@ -45,17 +61,7 @@ class SlackMessage extends EventEmitter2 {
             logger.info('message receive: ' + msg);
             if (!msg) { return; } // msgがnullの時があるので
             msg = msg.replace(/<@.*>/, '');
-            const columnCount = (msg.match(this.emojiColumn) || []).length;
-            if (columnCount >= 2) { // コロン2つが含まれた場合、絵文字を検索
-                for (var emojiRegExpKey in this.emojiRegExps) {
-                    const emojiRegExp = this.emojiRegExps[emojiRegExpKey];
-                    if (msg.match(emojiRegExp)) {
-                        const entity = emoji[emojiRegExpKey];
-                        msg = msg.replace(emojiRegExp, entity);
-                        // break すると複数の絵文字に変換できないのでしない
-                    }
-                }
-            }
+            msg = this.convertEntity(msg);
             this.emit('slack-message', msg);
         });
     }

@@ -81,7 +81,7 @@ function createLogWindow() {
         }
     });
     logWindow.setMenu(null);
-    logWindow.loadURL('file://' + __dirname + '/log.html');
+    logWindow.loadURL('file://' + __dirname + '/static/log.html');
     logWindow.on('close', (event) => {
         logWindow.hide();
         if (!appQuiting) {
@@ -278,7 +278,7 @@ function createWindow() {
     });
     niconicoWindow.setIgnoreMouseEvents(true);
     niconicoWindow.maximize();
-    niconicoWindow.loadURL('file://' + __dirname + '/index.html');
+    niconicoWindow.loadURL('file://' + __dirname + '/static/index.html');
     niconicoWindow.on('closed', function () {
         niconicoWindow = null;
     });

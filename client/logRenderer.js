@@ -25,6 +25,54 @@ const colorTable = [
     { "background": '#FFF', "borderLeft": '10px solid #ff6b81' },
     { "background": '#FFF', "borderLeft": '10px solid #ff339a' },
     { "background": '#FFF', "borderLeft": '10px solid #ff992a' },
+    // https://www.post-it.com/3M/en_US/post-it/products/~/Post-it-Products/Marrakesh-Collection/?N=4327+3292135882+3294529207+3294857497&rt=r3
+    { "background": '#FFF', "borderLeft": '10px solid #f1515b' },
+    { "background": '#FFF', "borderLeft": '10px solid #ffd42d' },
+    { "background": '#FFF', "borderLeft": '10px solid #5fc08b' },
+    { "background": '#FFF', "borderLeft": '10px solid #3399fe' },
+    { "background": '#FFF', "borderLeft": '10px solid #c391c3' },
+    // https://www.post-it.com/3M/en_US/post-it/products/~/Post-it-Products/Bora-Bora-Collection/?N=4327+3292135880+3294529207+3294857497&rt=r3
+    { "background": '#FFF', "borderLeft": '10px solid #5fc08b' },
+    { "background": '#FFF', "borderLeft": '10px solid #6dda6d' },
+    { "background": '#FFF', "borderLeft": '10px solid #cee9e0' },
+    { "background": '#FFF', "borderLeft": '10px solid #b4c9e6' },
+    { "background": '#FFF', "borderLeft": '10px solid #98b0dc' },
+    // https://www.post-it.com/3M/en_US/post-it/products/~/Post-it-Products/Bali-Collection/?N=4327+3292135881+3294529207+3294857497&rt=r3
+    { "background": '#FFF', "borderLeft": '10px solid #dfcde5' },
+    { "background": '#FFF', "borderLeft": '10px solid #ffbca8' },
+    { "background": '#FFF', "borderLeft": '10px solid #b6cae7' },
+    { "background": '#FFF', "borderLeft": '10px solid #facee1' },
+    { "background": '#FFF', "borderLeft": '10px solid #cfeae1' },
+    // https://www.post-it.com/3M/en_US/post-it/products/~/Post-it-Products/New-York-Collection/?N=4327+3292135850+3294529207+3294857497&rt=r3
+    { "background": '#FFF', "borderLeft": '10px solid #ffd42d' },
+    { "background": '#FFF', "borderLeft": '10px solid #98b1dd' },
+    { "background": '#FFF', "borderLeft": '10px solid #b6cae7' },
+    { "background": '#FFF', "borderLeft": '10px solid #c9c7c5' },
+    { "background": '#FFF', "borderLeft": '10px solid #ffd42d' },
+    // https://www.post-it.com/3M/en_US/post-it/products/~/Post-it-Products/Jaipur-Collection/?N=4327+3292135876+3294529207+3294857497&rt=r3
+    { "background": '#FFF', "borderLeft": '10px solid #6edb6d' },
+    { "background": '#FFF', "borderLeft": '10px solid #ffd42d' },
+    { "background": '#FFF', "borderLeft": '10px solid #ff9a28' },
+    { "background": '#FFF', "borderLeft": '10px solid #c392c3' },
+    { "background": '#FFF', "borderLeft": '10px solid #349aff' },
+    // https://www.post-it.com/3M/en_US/post-it/products/~/Post-it-Products/Cape-Town-Collection/?N=4327+3292135879+3294529207+3294857497&rt=r3
+    { "background": '#FFF', "borderLeft": '10px solid #ff6b81' },
+    { "background": '#FFF', "borderLeft": '10px solid #ff992a' },
+    { "background": '#FFF', "borderLeft": '10px solid #6ed2d0' },
+    { "background": '#FFF', "borderLeft": '10px solid #ff68b9' },
+    { "background": '#FFF', "borderLeft": '10px solid #def350' },
+    // https://www.post-it.com/3M/en_US/post-it/products/~/Post-it-Products/Marseille-Collection/?N=4327+3292135877+3294529207+3294857497&rt=r3
+    { "background": '#FFF', "borderLeft": '10px solid #cde7de' },
+    { "background": '#FFF', "borderLeft": '10px solid #6ed3d1' },
+    { "background": '#FFF', "borderLeft": '10px solid #f9f3a8' },
+    { "background": '#FFF', "borderLeft": '10px solid #facee1' },
+    { "background": '#FFF', "borderLeft": '10px solid #b6cae7' },
+    // https://www.post-it.com/3M/en_US/post-it/products/~/Post-it-Products/Helsinki-Collection/?N=4327+3292135878+3294529207+3294857497&rt=r3
+    { "background": '#FFF', "borderLeft": '10px solid #facee1' },
+    { "background": '#FFF', "borderLeft": '10px solid #f9f3a8' },
+    { "background": '#FFF', "borderLeft": '10px solid #cfeae1' },
+    { "background": '#FFF', "borderLeft": '10px solid #b6cae7' },
+    { "background": '#FFF', "borderLeft": '10px solid #dfcde5' },
 ];
 
 function createCommentBoxElement(msg) {

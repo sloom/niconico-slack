@@ -41,15 +41,27 @@ target url:      [https://niconico-slack-xxxxx-xxxxx.appspot.com]
 ```
 
 ## Slack App
-1. https://api.slack.com/apps からSlack Appを作成する
-    - [Create New App] > App Name と Workspace を入力してCreate Appする
-2. Bot Users
-    - Bot Userを作成する
-    - e.g. Display name:「niconico-slack」
-3. Event Subscriptions
-    - Request URL: 「https://niconico-slack-xxxxx-xxxxx.appspot.com/slack」を設定
-    - Subscribe to Bot Events: 「app_mention」と「message.im」を登録
-4. Install App
+1. https://api.slack.com/apps を開く
+    - [Create New App] > From scrach を選び、App Name と Workspace を入力してCreate Appする
+2. 左メニューの Basic Information ページを開く
+    - Display Information で
+        - Short description には適当な説明を入力
+        - App icon & Preview で任意のアイコンやバックグラウンドカラーを選択
+        - Save Changes を押下
+3. 右ペイン上部の Add features and functionality 内または左メニューにある Event Subscriptions を選ぶ
+    - Enable Events を ON にする
+    - Request URL: 「https://niconico-slack-xxxxx-xxxxx.appspot.com/slack」(デプロイしたサービス)を設定
+        - 入力後テキストボックスのフォーカスを外すと検証されます。Verified ✔ と出れば OK
+        - URL が間違っていたり、うまくデプロイできていないと Your URL didn't respond with the value of the challenge parameter. といったエラーが出ます。
+4. Event Subscriptions 内で下にある Subscribe to bot events を選択
+    - 展開されたメニューから、Add Bot User Event ボタンを押し、以下を指定して Save Changes を押します
+        - app_mention
+        - message.im (DMでデバッグする場合の任意)
+5. 右ペイン内 Show Tabs から、Always Show My Bot as Online を ON に
+6. Message Tab から Allow users to send Slash commands and messages from the messages tab を ON にする
+7. 左メニューから Install App を選択
+8. Install to Workspace を選択
+9. 許可するを選択
 
 ## クライアント
 1. ホスト名を以下のうちいずれかに設定します。数字の通りの優先順で読み込まれます。※前バージョンまでの config/default.yaml は 2 のテンプレになりました。直接は読み込まれません。

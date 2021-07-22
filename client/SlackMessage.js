@@ -56,6 +56,7 @@ class SlackMessage extends EventEmitter2 {
         });
         this.socketio.on('connect_error', (err) => {
             logger.warn(`connect failed. err=${err}`);
+            this.emit('connect_error', err);
         });
         this.socketio.on('message', (msg) => {
             logger.info('message receive: ' + msg);

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu, Notification } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, Notification, dialog } = require('electron');
 const isMac = process.platform === 'darwin';
 const logger = require('./Logger');
 const path = require('path');
@@ -195,17 +195,7 @@ function setupTray() {
                                 niconicoWindow.openDevTools();
                                 const title = app.getName();
                                 const message = `Changed window attribute to start Chrome DevTools. Please restart the application after debugging.`;
-                                if (isMac) {
-                                    new Notification({
-                                        title: title,
-                                        body: message
-                                    }).show();
-                                } else {
-                                    tray.displayBalloon({
-                                        title: title,
-                                        content: message
-                                    });
-                                }
+                                notifyMessage(title, message);
                             }
                         },
                         {
@@ -245,6 +235,20 @@ function setupTray() {
     })
 }
 
+function notifyMessage(title, message) {
+    if (isMac) {
+        new Notification({
+            title: title,
+            body: message
+        }).show();
+    } else {
+        tray.displayBalloon({
+            title: title,
+            content: message
+        });
+    }
+}
+
 function subscribeSlackMessage() {
     slackMessage.on('slack-message', (message) => {
         niconicoWindow.webContents.send('slack-message', message);
@@ -253,6 +257,14 @@ function subscribeSlackMessage() {
 }
 
 function connectWebSocket(host) {
+    slackMessage.once('connect_error', (err) => {
+        app.whenReady().then(() => {
+            dialog.showMessageBox({
+                title: app.getName(),
+                message: `Connect failed.\n\nHost:\n${host}\n\nError Detail:\n${err}`
+            });
+        });
+    });
     slackMessage.connect(host);
 }
 

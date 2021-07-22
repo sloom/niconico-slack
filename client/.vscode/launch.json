@@ -15,7 +15,9 @@
         "stopOnEntry": false,
         "env": {
           "NODE_ENV": "debug",
-        }
+        },
+        "console": "internalConsole",
+        "outputCapture": "std"
       },
       {
         "name": "Debug Renderer Process",

@@ -65,16 +65,6 @@ function initialize() {
     });
 }
 
-function getDisplays() {
-    const displays = screen.getAllDisplays()
-    const externalDisplay = displays.find((display) => {
-      return display.bounds.x !== 0 || display.bounds.y !== 0
-    })
-    if (externalDisplay) {
-
-    }
-}
-
 function createLogWindow() {
     const size = screen.getPrimaryDisplay().size;
     const width = size.width / 4;
@@ -171,7 +161,37 @@ function allClose() {
             logWindow = null;
         }
     }
+}
 
+function updateWindowConfig(args) {
+    const configToSet = {};
+    Object.keys(args).forEach((key) => {
+        configToSet[`config.${key}`] = args[key];
+    });
+    config.set(configToSet);
+}
+
+function resolveDisplays() {
+    const menu = [];
+    const displays = screen.getAllDisplays()
+    displays.forEach((display) => {
+        const bounds = display.bounds;
+        const size = display.size;
+        menu.push({
+            label: `id:${display.id}(x:${bounds.x},y:${bounds.y},w:${size.width},h:${size.height})`,
+            type: 'normal',
+            click: () => {
+                updateWindowConfig({
+                    id: display.id,
+                    x: bounds.x,
+                    y: bounds.y,
+                    width: size.width,
+                    height: size.height
+                })
+            }
+        });
+    });
+    return menu;
 }
 
 function setupTray() {
@@ -227,6 +247,11 @@ function setupTray() {
         },
         { type: 'separator' },
         {
+            label: 'Display',
+            submenu: resolveDisplays()
+        },
+        { type: 'separator' },
+        {
             label: 'Exit', type: 'normal', click: () => {
                 allClose();
                 app.quit();
@@ -276,6 +301,32 @@ function connectWebSocket(host) {
         });
     });
     slackMessage.connect(host);
+}
+
+function createWindowAuto() {
+    const displayId = config.get('config.id');
+    if (!displayId) {
+        createWindowOnPrimary();
+        return;
+    }
+    // 以下、設定にディスプレイ設定は存在
+    // 外部ディスプレイの存在チェック
+    const displays = screen.getAllDisplays()
+    const externalDisplay = displays.find((display) => {
+      return display.bounds.x !== 0 || display.bounds.y !== 0
+    })
+    if (!externalDisplay) {
+        // 設定は存在したが、現状外部ディスプレイはない
+        // エラーメッセージを出した上で Primary に表示
+        // TODO: エラーメッセージ
+        createWindowOnPrimary();
+        return;
+    }
+    // 設定があり外部ディスプレイもある。妥当性のチェック
+    // TODO: 前回と一致していない場合、エラーメッセージとデフォルトに戻す旨
+    // 前回と一致しているならそのパラメーターで起動
+    createWindow(config.get('config.x'), config.get('config.y'), config.get('config.width'), config.get('config.width'));
+    return;
 }
 
 function createWindowOnPrimary() {
@@ -346,7 +397,7 @@ app.whenReady()
     .then(logAppInfo())
     .then(initialize)
     .then(addIpcListener)
-    .then(createWindowOnPrimary)
+    .then(createWindowAuto)
     .then(createLogWindow)
     .then(setupTray)
     .then(subscribeSlackMessage)

@@ -65,6 +65,16 @@ function initialize() {
     });
 }
 
+function getDisplays() {
+    const displays = screen.getAllDisplays()
+    const externalDisplay = displays.find((display) => {
+      return display.bounds.x !== 0 || display.bounds.y !== 0
+    })
+    if (externalDisplay) {
+
+    }
+}
+
 function createLogWindow() {
     const size = screen.getPrimaryDisplay().size;
     const width = size.width / 4;
@@ -268,13 +278,17 @@ function connectWebSocket(host) {
     slackMessage.connect(host);
 }
 
-function createWindow() {
+function createWindowOnPrimary() {
     const size = screen.getPrimaryDisplay().size;
+    createWindow(0, 0, size.width, size.height);
+}
+
+function createWindow(x, y, width, height) {
     niconicoWindow = new BrowserWindow({
-        left: 0,
-        top: 0,
-        width: size.width,
-        height: size.height,
+        left: x,
+        top: y,
+        width: width,
+        height: height,
         frame: process.platform === 'darwin' ? true : false,
         show: false,
         transparent: true,
@@ -332,7 +346,7 @@ app.whenReady()
     .then(logAppInfo())
     .then(initialize)
     .then(addIpcListener)
-    .then(createWindow)
+    .then(createWindowOnPrimary)
     .then(createLogWindow)
     .then(setupTray)
     .then(subscribeSlackMessage)

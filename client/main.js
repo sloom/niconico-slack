@@ -325,7 +325,7 @@ function createWindowAuto() {
     // 設定があり外部ディスプレイもある。妥当性のチェック
     // TODO: 前回と一致していない場合、エラーメッセージとデフォルトに戻す旨
     // 前回と一致しているならそのパラメーターで起動
-    createWindow(config.get('config.x'), config.get('config.y'), config.get('config.width'), config.get('config.width'));
+    createWindow(config.get('config.x'), config.get('config.y'), config.get('config.width'), config.get('config.height'));
     return;
 }
 
@@ -336,8 +336,8 @@ function createWindowOnPrimary() {
 
 function createWindow(x, y, width, height) {
     niconicoWindow = new BrowserWindow({
-        left: x,
-        top: y,
+        x: x,
+        y: y,
         width: width,
         height: height,
         frame: process.platform === 'darwin' ? true : false,

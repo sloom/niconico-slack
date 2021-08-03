@@ -163,6 +163,62 @@ function allClose() {
     }
 }
 
+function reopenWindow() {
+    niconicoWindow.close();
+    createWindowAuto();
+}
+
+function watchWindowConfig() {
+    config.onDidChange('config.id', () => {
+        reopenWindow();
+    });
+    config.onDidChange('config.x', () => {
+        reopenWindow();
+    });
+    config.onDidChange('config.y', () => {
+        reopenWindow();
+    });
+    config.onDidChange('config.width', () => {
+        reopenWindow();
+    });
+    config.onDidChange('config.height', () => {
+        reopenWindow();
+    });
+}
+
+let hasShowRelaunchDialog = false;
+
+function watchScreenChanged() {
+    const errorAndRelaunch = () => {
+        if (hasShowRelaunchDialog) return;
+        app.whenReady().then(() => {
+            hasShowRelaunchDialog = true;            
+            dialog.showMessageBoxSync({
+                title: app.getName(),
+                message: 'The resolution or configuration of the display has been changed. '
+                    + 'This app does not support these changes dynamically,'
+                    + 'so please follow the instructions below to set it up.\n\n'
+                    + '1. Restart the app.\n'
+                    + '2. From the task tray, from the Display sub-menu, re-select the display '
+                    + 'you want to show (even if it is already selected with the radio button, select it again).\n\n'
+                    + 'Press OK to restart.'
+            });
+            app.relaunch();
+            app.quit();
+        });
+    }
+
+    screen.on('display-added', () => {
+        errorAndRelaunch();
+    });
+    screen.on('display-removed', () => {
+        errorAndRelaunch();
+    });
+    screen.on('display-metrics-changed', () => {
+        errorAndRelaunch();
+    });
+}
+
 function updateWindowConfig(args) {
     const configToSet = {};
     Object.keys(args).forEach((key) => {
@@ -174,12 +230,14 @@ function updateWindowConfig(args) {
 function resolveDisplays() {
     const menu = [];
     const displays = screen.getAllDisplays()
+    const currentConfigDisplayId = config.get('config.id');
     displays.forEach((display) => {
         const bounds = display.bounds;
         const size = display.size;
         menu.push({
             label: `id:${display.id}(x:${bounds.x},y:${bounds.y},w:${size.width},h:${size.height})`,
-            type: 'normal',
+            type: 'radio',
+            checked: currentConfigDisplayId == display.id,
             click: () => {
                 updateWindowConfig({
                     id: display.id,
@@ -214,6 +272,11 @@ function setupTray() {
         },
         { type: 'separator' },
         {
+            label: 'Display',
+            submenu: resolveDisplays()
+        },
+        { type: 'separator' },
+        {
             label: 'Debug',
             submenu: [
                 {
@@ -244,11 +307,6 @@ function setupTray() {
                     }
                 }
             ]
-        },
-        { type: 'separator' },
-        {
-            label: 'Display',
-            submenu: resolveDisplays()
         },
         { type: 'separator' },
         {
@@ -401,5 +459,7 @@ app.whenReady()
     .then(createLogWindow)
     .then(setupTray)
     .then(subscribeSlackMessage)
+    .then(watchWindowConfig)
     .then(connectWebSocket(config.resolveHost()))
+    .then(watchScreenChanged)
     .then(pollSetForground(true));

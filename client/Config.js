@@ -38,6 +38,10 @@ class Config {
         return targetHost;
     }
 
+    onDidChange(key, callback) {
+        store.onDidChange(key, callback);
+    }
+
 }
 
 module.exports = new Config();

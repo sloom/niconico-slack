@@ -199,7 +199,7 @@ function watchScreenChanged() {
                     + 'This app does not support these changes dynamically,'
                     + 'so please follow the instructions below to set it up.\n\n'
                     + '1. Restart the app.\n'
-                    + '2. From the task tray, from the Display sub-menu, re-select the display '
+                    + '2. From the task tray, Settings > Display sub-menu, re-select the display '
                     + 'you want to show (even if it is already selected with the radio button, select it again).\n\n'
                     + 'Press OK to restart.'
             });
@@ -268,12 +268,11 @@ function setupTray() {
                         updateAlwaysOnTop(r.checked);
                     }
                 },
+                {
+                    label: 'Display',
+                    submenu: resolveDisplays()
+                },
             ]
-        },
-        { type: 'separator' },
-        {
-            label: 'Display',
-            submenu: resolveDisplays()
         },
         { type: 'separator' },
         {

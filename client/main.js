@@ -192,7 +192,7 @@ function watchScreenChanged() {
     const errorAndRelaunch = () => {
         if (hasShowRelaunchDialog) return;
         app.whenReady().then(() => {
-            hasShowRelaunchDialog = true;            
+            hasShowRelaunchDialog = true;
             dialog.showMessageBoxSync({
                 title: app.getName(),
                 message: 'The resolution or configuration of the display has been changed. '
@@ -209,13 +209,15 @@ function watchScreenChanged() {
     }
 
     screen.on('display-added', () => {
+        logger.info('display-added event.');
         errorAndRelaunch();
     });
     screen.on('display-removed', () => {
+        logger.info('display-removed event.');
         errorAndRelaunch();
     });
     screen.on('display-metrics-changed', () => {
-        errorAndRelaunch();
+        logger.info('display-metrics-changed event.');
     });
 }
 

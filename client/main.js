@@ -161,7 +161,97 @@ function allClose() {
             logWindow = null;
         }
     }
+}
 
+function reopenWindow() {
+    niconicoWindow.close();
+    createWindowAuto();
+}
+
+function watchWindowConfig() {
+    config.onDidChange('config.id', () => {
+        reopenWindow();
+    });
+    config.onDidChange('config.x', () => {
+        reopenWindow();
+    });
+    config.onDidChange('config.y', () => {
+        reopenWindow();
+    });
+    config.onDidChange('config.width', () => {
+        reopenWindow();
+    });
+    config.onDidChange('config.height', () => {
+        reopenWindow();
+    });
+}
+
+let hasShowRelaunchDialog = false;
+
+function watchScreenChanged() {
+    const errorAndRelaunch = () => {
+        if (hasShowRelaunchDialog) return;
+        app.whenReady().then(() => {
+            hasShowRelaunchDialog = true;
+            dialog.showMessageBoxSync({
+                title: app.getName(),
+                message: 'The resolution or configuration of the display has been changed. '
+                    + 'This app does not support these changes dynamically,'
+                    + 'so please follow the instructions below to set it up.\n\n'
+                    + '1. Restart the app.\n'
+                    + '2. From the task tray, Settings > Display sub-menu, re-select the display '
+                    + 'you want to show (even if it is already selected with the radio button, select it again).\n\n'
+                    + 'Press OK to restart.'
+            });
+            app.relaunch();
+            app.quit();
+        });
+    }
+
+    screen.on('display-added', () => {
+        logger.info('display-added event.');
+        errorAndRelaunch();
+    });
+    screen.on('display-removed', () => {
+        logger.info('display-removed event.');
+        errorAndRelaunch();
+    });
+    screen.on('display-metrics-changed', () => {
+        logger.info('display-metrics-changed event.');
+    });
+}
+
+function updateWindowConfig(args) {
+    const configToSet = {};
+    Object.keys(args).forEach((key) => {
+        configToSet[`config.${key}`] = args[key];
+    });
+    config.set(configToSet);
+}
+
+function resolveDisplays() {
+    const menu = [];
+    const displays = screen.getAllDisplays()
+    const currentConfigDisplayId = config.get('config.id');
+    displays.forEach((display) => {
+        const bounds = display.bounds;
+        const size = display.size;
+        menu.push({
+            label: `id:${display.id}(x:${bounds.x},y:${bounds.y},w:${size.width},h:${size.height})`,
+            type: 'radio',
+            checked: currentConfigDisplayId == display.id,
+            click: () => {
+                updateWindowConfig({
+                    id: display.id,
+                    x: bounds.x,
+                    y: bounds.y,
+                    width: size.width,
+                    height: size.height
+                })
+            }
+        });
+    });
+    return menu;
 }
 
 function setupTray() {
@@ -179,6 +269,10 @@ function setupTray() {
                     label: 'Always on top', type: 'checkbox', checked: niconicoWindow.isAlwaysOnTop(), click: (r) => {
                         updateAlwaysOnTop(r.checked);
                     }
+                },
+                {
+                    label: 'Display',
+                    submenu: resolveDisplays()
                 },
             ]
         },
@@ -268,13 +362,43 @@ function connectWebSocket(host) {
     slackMessage.connect(host);
 }
 
-function createWindow() {
+function createWindowAuto() {
+    const displayId = config.get('config.id');
+    if (!displayId) {
+        createWindowOnPrimary();
+        return;
+    }
+    // 以下、設定にディスプレイ設定は存在
+    // 外部ディスプレイの存在チェック
+    const displays = screen.getAllDisplays()
+    const externalDisplay = displays.find((display) => {
+      return display.bounds.x !== 0 || display.bounds.y !== 0
+    })
+    if (!externalDisplay) {
+        // 設定は存在したが、現状外部ディスプレイはない
+        // エラーメッセージを出した上で Primary に表示
+        // TODO: エラーメッセージ
+        createWindowOnPrimary();
+        return;
+    }
+    // 設定があり外部ディスプレイもある。妥当性のチェック
+    // TODO: 前回と一致していない場合、エラーメッセージとデフォルトに戻す旨
+    // 前回と一致しているならそのパラメーターで起動
+    createWindow(config.get('config.x'), config.get('config.y'), config.get('config.width'), config.get('config.height'));
+    return;
+}
+
+function createWindowOnPrimary() {
     const size = screen.getPrimaryDisplay().size;
+    createWindow(0, 0, size.width, size.height);
+}
+
+function createWindow(x, y, width, height) {
     niconicoWindow = new BrowserWindow({
-        left: 0,
-        top: 0,
-        width: size.width,
-        height: size.height,
+        x: x,
+        y: y,
+        width: width,
+        height: height,
         frame: process.platform === 'darwin' ? true : false,
         show: false,
         transparent: true,
@@ -332,9 +456,11 @@ app.whenReady()
     .then(logAppInfo())
     .then(initialize)
     .then(addIpcListener)
-    .then(createWindow)
+    .then(createWindowAuto)
     .then(createLogWindow)
     .then(setupTray)
     .then(subscribeSlackMessage)
+    .then(watchWindowConfig)
     .then(connectWebSocket(config.resolveHost()))
+    .then(watchScreenChanged)
     .then(pollSetForground(true));

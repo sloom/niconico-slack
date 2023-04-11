@@ -198,13 +198,10 @@ function watchScreenChanged() {
                 message: 'The resolution or configuration of the display has been changed. '
                     + 'This app does not support these changes dynamically,'
                     + 'so please follow the instructions below to set it up.\n\n'
-                    + '1. Restart the app.\n'
-                    + '2. From the task tray, Settings > Display sub-menu, re-select the display '
-                    + 'you want to show (even if it is already selected with the radio button, select it again).\n\n'
-                    + 'Press OK to restart.'
+                    + '1. From the task tray, Settings > Display sub-menu, re-select the display '
+                    + 'you want to show (even if it is already selected with the radio button, select it again).\n'
+                    + '2. Restart the app.'
             });
-            app.relaunch();
-            app.quit();
         });
     }
 
